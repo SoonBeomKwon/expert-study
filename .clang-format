@@ -1,0 +1,8 @@
+---
+Language: Cpp
+BasedOnStyle: Google
+Standard: c++14
+ColumnLimit: 80
+DerivePointerAlignment: false
+PointerAlignment: Left
+IncludeBlocks: Preserve
