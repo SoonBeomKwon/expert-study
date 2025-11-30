@@ -1,9 +1,4 @@
-// 5194765
-#include <chrono>
-#include "type.h"
-
-Time time_checker;
-
+// 5053420
 extern void scan(int floorState[3][3]);
 extern int move(void);
 extern void turn(int mCommand);
@@ -15,6 +10,11 @@ static int obs_map[N][N] = {
 static bool visited_map[N][N] = {
     false,
 };
+static int bfs_visit[N][N] = {
+    0,
+};
+int bfs_count = 0;
+
 static int left_top_x = N / 2;
 static int left_top_y = N / 2;
 static int right_bottom_x = N / 2;
@@ -36,80 +36,14 @@ struct Cell {
   int heading = 0;
   Cell* parent_cell = nullptr;
 };
+Cell* queue_cell[N * N] = {
+    nullptr,
+};
 
 static Cell heap_cell[1000000];
 static int heap_count = 0;
 
 Cell* BringHeap() { return &heap_cell[heap_count++]; }
-
-bool CheckEndCondition(Cell cell) {
-  auto start_time = std::chrono::high_resolution_clock::now();
-  bool bfs_visit[N][N] = {
-      false,
-  };
-
-  Cell* queue_cell[N * N] = {
-      nullptr,
-  };
-  int front = 0;
-  int rear = 0;
-
-  bfs_visit[robot_y][robot_x] = true;
-  queue_cell[rear] = &cell;
-  rear++;
-
-  while (front < rear) {
-    Cell* curr_cell = queue_cell[front];
-    front++;
-
-    for (int i = 0; i < 8; i++) {
-      int next_x = curr_cell->x + ddx[i];
-      int next_y = curr_cell->y + ddy[i];
-
-      if (obs_map[next_y][next_x] == -1) {
-        auto end_time = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> sec = end_time - start_time;
-        time_checker.check_end_condition += sec.count();
-        return false;
-      }
-
-      if (bfs_visit[next_y][next_x]) continue;
-      if (obs_map[next_y][next_x] == 0) {
-        Cell* next_cell = BringHeap();
-        next_cell->x = next_x;
-        next_cell->y = next_y;
-        next_cell->parent_cell = curr_cell;
-        queue_cell[rear] = next_cell;
-        bfs_visit[next_y][next_x] = true;
-        rear++;
-      }
-    }
-  }
-
-  auto end_time = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> sec = end_time - start_time;
-  time_checker.check_end_condition += sec.count();
-  return true;
-}
-
-bool ExistUncoverFreeCell() {
-  auto start_time = std::chrono::high_resolution_clock::now();
-  for (int y = left_top_y; y <= right_bottom_y; ++y) {
-    for (int x = left_top_x; x <= right_bottom_x; ++x) {
-      if (obs_map[y][x] == 0 && !visited_map[y][x]) {
-        auto end_time = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> sec = end_time - start_time;
-        time_checker.exist_uncover_free_cell += sec.count();
-        return true;
-      }
-    }
-  }
-
-  auto end_time = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> sec = end_time - start_time;
-  time_checker.exist_uncover_free_cell += sec.count();
-  return false;
-}
 
 bool IsNear8UnknownCell(const int robot_x, const int robot_y) {
   for (int y = -1; y <= 1; ++y) {
@@ -178,18 +112,11 @@ void Turn(const int direction) {
 }
 
 int FindNextCellForFreeCell(Cell cell, int* target_x_list, int* target_y_list) {
-  auto start_time = std::chrono::high_resolution_clock::now();
-  bool bfs_visit[N][N] = {
-      false,
-  };
-
-  Cell* queue_cell[N * N] = {
-      nullptr,
-  };
   int front = 0;
   int rear = 0;
+  bfs_count++;
 
-  bfs_visit[robot_y][robot_x] = true;
+  bfs_visit[robot_y][robot_x] = bfs_count;
   queue_cell[rear] = &cell;
   rear++;
 
@@ -212,7 +139,7 @@ int FindNextCellForFreeCell(Cell cell, int* target_x_list, int* target_y_list) {
       int next_x = curr_cell->x + dx[next_heading];
       int next_y = curr_cell->y + dy[next_heading];
 
-      if (bfs_visit[next_y][next_x]) continue;
+      if (bfs_visit[next_y][next_x] == bfs_count) continue;
       if (obs_map[next_y][next_x] == 0) {
         Cell* next_cell = BringHeap();
         next_cell->x = next_x;
@@ -220,7 +147,7 @@ int FindNextCellForFreeCell(Cell cell, int* target_x_list, int* target_y_list) {
         next_cell->heading = next_heading;
         next_cell->parent_cell = curr_cell;
         queue_cell[rear] = next_cell;
-        bfs_visit[next_y][next_x] = true;
+        bfs_visit[next_y][next_x] = bfs_count;
         rear++;
       }
     }
@@ -235,74 +162,6 @@ int FindNextCellForFreeCell(Cell cell, int* target_x_list, int* target_y_list) {
       size++;
       search_cell = search_cell->parent_cell;
     } while (search_cell->parent_cell != nullptr);
-
-    auto end_time = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> sec = end_time - start_time;
-    time_checker.find_next_cell_for_free_cell += sec.count();
-    return size;
-  }
-  return 0;
-}
-
-int FindNextCellForUnknownCell(Cell cell, int* target_x_list,
-                               int* target_y_list) {
-  auto start_time = std::chrono::high_resolution_clock::now();
-  bool bfs_visit[N][N] = {
-      false,
-  };
-
-  Cell* queue_cell[N * N];
-  int front = 0;
-  int rear = 0;
-
-  bfs_visit[robot_y][robot_x] = true;
-  queue_cell[rear] = &cell;
-  rear++;
-
-  bool find_unknown_cell = false;
-  Cell* unknown_cell;
-
-  while (front < rear) {
-    Cell* curr_cell = queue_cell[front];
-    front++;
-
-    if (IsNear8UnknownCell(curr_cell->x, curr_cell->y)) {
-      find_unknown_cell = true;
-      unknown_cell = curr_cell;
-      break;
-    }
-
-    for (int i = 0; i < 4; i++) {
-      int next_heading = (curr_cell->heading + i) % 4;
-      int next_x = curr_cell->x + dx[next_heading];
-      int next_y = curr_cell->y + dy[next_heading];
-
-      if (bfs_visit[next_y][next_x]) continue;
-      if (obs_map[next_y][next_x] == 0) {
-        Cell* next_cell = BringHeap();
-        next_cell->x = next_x;
-        next_cell->y = next_y;
-        next_cell->heading = next_heading;
-        next_cell->parent_cell = curr_cell;
-        queue_cell[rear] = next_cell;
-        bfs_visit[next_y][next_x] = true;
-        rear++;
-      }
-    }
-  }
-
-  if (find_unknown_cell) {
-    int size = 0;
-    Cell* search_cell = unknown_cell;
-    do {
-      target_x_list[size] = search_cell->x;
-      target_y_list[size] = search_cell->y;
-      size++;
-      search_cell = search_cell->parent_cell;
-    } while (search_cell->parent_cell != nullptr);
-    auto end_time = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> sec = end_time - start_time;
-    time_checker.find_next_cell_for_unknown_cell += sec.count();
     return size;
   }
   return 0;
@@ -325,17 +184,12 @@ void ResetVisitedMap() {
 }
 
 void ResetMap() {
-  auto start_time = std::chrono::high_resolution_clock::now();
   ResetObsMap();
   ResetVisitedMap();
   left_top_x = N / 2;
   left_top_y = N / 2;
   right_bottom_x = N / 2;
   right_bottom_y = N / 2;
-
-  auto end_time = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> sec = end_time - start_time;
-  time_checker.reset_map += sec.count();
 }
 
 bool ExistMap() { return obs_map[N / 2][N / 2] == 0; }
@@ -377,8 +231,6 @@ bool MatchScan(const int candidate_x, const int candidate_y,
 bool Relocalize(int* relocal_pose_x, int* relocal_pose_y,
                 int* relocal_pose_heading, int move_state_list[N],
                 int* move_state_size) {
-  auto start_time = std::chrono::high_resolution_clock::now();
-
   int candidate_x[N * N * 4] = {
       -1,
   };
@@ -407,6 +259,8 @@ bool Relocalize(int* relocal_pose_x, int* relocal_pose_y,
     }
   }
 
+  int n = 0;
+  const int filter = 2;
   while (true) {
     int move_state = 0;
     if (!move()) {
@@ -422,7 +276,9 @@ bool Relocalize(int* relocal_pose_x, int* relocal_pose_y,
         }
       }
     }
-    scan(local_map);
+
+    if (n % filter == 0) scan(local_map);
+
     move_state_list[*move_state_size] = move_state;
     (*move_state_size)++;
 
@@ -435,13 +291,15 @@ bool Relocalize(int* relocal_pose_x, int* relocal_pose_y,
       next_x += dx[next_heading];
       next_y += dy[next_heading];
 
-      if (MatchScan(next_x, next_y, next_heading, local_map)) {
-        candidate_x[i] = next_x;
-        candidate_y[i] = next_y;
-        candidate_heading[i] = next_heading;
-      } else {
-        candidate_heading[i] = -1;
-        candidate_count--;
+      candidate_x[i] = next_x;
+      candidate_y[i] = next_y;
+      candidate_heading[i] = next_heading;
+
+      if (n % filter == 0) {
+        if (!MatchScan(next_x, next_y, next_heading, local_map)) {
+          candidate_heading[i] = -1;
+          candidate_count--;
+        }
       }
     }
 
@@ -451,19 +309,14 @@ bool Relocalize(int* relocal_pose_x, int* relocal_pose_y,
           *relocal_pose_x = candidate_x[i];
           *relocal_pose_y = candidate_y[i];
           *relocal_pose_heading = candidate_heading[i];
-
-          auto end_time = std::chrono::high_resolution_clock::now();
-          std::chrono::duration<double> sec = end_time - start_time;
-          time_checker.relocalize += sec.count();
           return true;
         }
       }
     }
+    n++;
   }
   return false;
 }
-
-Time GetTimeChecker() { return time_checker; }
 
 void init() {
   ResetMap();
@@ -485,29 +338,22 @@ void cleanHouse() {
   if (ExistMap()) {
     int move_state_list[N * N];
     int move_state_size = 0;
-    if (Relocalize(&robot_x, &robot_y, &robot_heading, move_state_list,
-                   &move_state_size)) {
-      int check_x = robot_x;
-      int check_y = robot_y;
-      int check_heading = robot_heading;
-      visited_map[robot_y][robot_x] = true;
-      for (int i = move_state_size - 1; i >= 0; --i) {
-        check_x -= dx[check_heading];
-        check_y -= dy[check_heading];
-        check_heading = check_heading - move_state_list[i];
-        if (check_heading < 0) check_heading += 4;
-        visited_map[check_y][check_x] = true;
-      }
-      do_relocalize = true;
-    } else {
-      ResetMap();
-      visited_map[robot_y][robot_x] = true;
-      ApplyObsMap(robot_x, robot_y, robot_heading);
+    Relocalize(&robot_x, &robot_y, &robot_heading, move_state_list,
+               &move_state_size);
+    int check_x = robot_x;
+    int check_y = robot_y;
+    int check_heading = robot_heading;
+    for (int i = move_state_size - 1; i >= 0; --i) {
+      check_x -= dx[check_heading];
+      check_y -= dy[check_heading];
+      check_heading = check_heading - move_state_list[i];
+      if (check_heading < 0) check_heading += 4;
+      visited_map[check_y][check_x] = true;
     }
-  } else {
-    visited_map[robot_y][robot_x] = true;
-    ApplyObsMap(robot_x, robot_y, robot_heading);
+    do_relocalize = true;
   }
+  visited_map[robot_y][robot_x] = true;
+
   while (true) {
     Cell curr_cell;
     curr_cell.x = robot_x;
@@ -518,21 +364,12 @@ void cleanHouse() {
     int next_x_list[N * 2];
     int next_y_list[N * 2];
     int size = 0;
-    if (do_relocalize) {
-      if (!ExistUncoverFreeCell()) break;
-      size = FindNextCellForFreeCell(curr_cell, next_x_list, next_y_list);
-    } else {
-      if (ExistUncoverFreeCell()) {
-        size = FindNextCellForFreeCell(curr_cell, next_x_list, next_y_list);
-      } else {
-        if (CheckEndCondition(curr_cell)) break;
-        if (IsNear8UnknownCell(robot_x, robot_y)) {
-          ApplyObsMap(robot_x, robot_y, robot_heading);
-          continue;
-        }
-        size = FindNextCellForUnknownCell(curr_cell, next_x_list, next_y_list);
-      }
+    if (!do_relocalize) {
+      if (IsNear8UnknownCell(robot_x, robot_y))
+        ApplyObsMap(robot_x, robot_y, robot_heading);
     }
+    size = FindNextCellForFreeCell(curr_cell, next_x_list, next_y_list);
+    if (size == 0) break;
 
     for (int i = size - 1; i >= 0; i--) {
       int next_x = next_x_list[i];

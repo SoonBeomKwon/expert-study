@@ -160,18 +160,18 @@ int main() {
     printf("SCORE: %lld\n", SCORE);
     printf("PASSED\n");
 
-    auto time_checker = GetTimeChecker();
-    std::cout << "time check\n";
-    std::cout << "Relocalize: " << time_checker.relocalize << "\n";
-    std::cout << "ResetMap: " << time_checker.reset_map << "\n";
-    std::cout << "ExistUncoverFreeCell: "
-              << time_checker.exist_uncover_free_cell << "\n";
-    std::cout << "FindNextCellForFreeCell: "
-              << time_checker.find_next_cell_for_free_cell << "\n";
-    std::cout << "FindNextCellForUnknownCell: "
-              << time_checker.find_next_cell_for_unknown_cell << "\n";
-    std::cout << "CheckEndCOndition: " << time_checker.check_end_condition
-              << "\n";
+    // auto time_checker = GetTimeChecker();
+    // std::cout << "time check\n";
+    // std::cout << "Relocalize: " << time_checker.relocalize << "\n";
+    // std::cout << "ResetMap: " << time_checker.reset_map << "\n";
+    // std::cout << "ExistUncoverFreeCell: "
+    //           << time_checker.exist_uncover_free_cell << "\n";
+    // std::cout << "FindNextCellForFreeCell: "
+    //           << time_checker.find_next_cell_for_free_cell << "\n";
+    // std::cout << "FindNextCellForUnknownCell: "
+    //           << time_checker.find_next_cell_for_unknown_cell << "\n";
+    // std::cout << "CheckEndCOndition: " << time_checker.check_end_condition
+    //           << "\n";
   } else {
     printf("SCORE: %lld\n", SCORE);
   }
